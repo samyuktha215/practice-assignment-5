@@ -5,16 +5,19 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.stereotype.Repository;
 
 import java.util.HashMap;
 import java.util.List;
 
+import org.springframework.stereotype.Repository;
+import org.springframework.web.bind.annotation.RestController;
 import se.jensen.javacourse.week4.model.Artist;
 import se.jensen.javacourse.week4.model.Track;
-
+@Repository
 public class LibraryRepository
 {
+    @Autowired
+    JdbcTemplate jdbcTemplate;
     public List<String> readArtistNames()
     {
         // NOTE: this method is only supposed to read the names
@@ -22,13 +25,16 @@ public class LibraryRepository
         
         // todo: write an SQL query that selects only
         //  the name column from the artists table
-        String sql = "";// <<< todo: SQL query here
+        String sql = " SELECT name FROM artists" ; // <<< todo: SQL query here
         
         // you can use this RowMapper, no need to change it
         RowMapper<String> rm = (rs, rowNum) -> rs.getString("name");
+
+        return jdbcTemplate.query(sql,rm);
+
         
         // todo: execute the query and return whatever it returns
-        return null;// <<< todo: execute the query here and return the result
+        // <<< todo: execute the query here and return the result
     }
     
     public HashMap<Integer, Artist> readArtists()
@@ -58,14 +64,18 @@ public class LibraryRepository
     {
         // NOTE: this method is supposed to get one artist with
         //  all their details and return an Artist object
-        
+
         // todo: write an SQL query that selects all columns from the artists
         //  table, but only for rows where id equals the method parameter 'id'
-        String sql = "";// <<< todo: SQL query here
+        String sql = "SELECT * FROM artists WHERE id = ?";// <<< todo: SQL query here
         
         // todo: create a RowMapper that uses the
         //  constructor Artist(int id, String name)
 //        RowMapper<Artist> rm = (rs, rowNum) -> ..... <<< todo: CONTINUE HERE
+        RowMapper<Artist> rm =( rs,rowNum)-> new Artist(
+                rs.getInt("id"),
+                rs.getString("name")
+    );
         try
         {
             // leave this as it is
@@ -82,10 +92,14 @@ public class LibraryRepository
     {
         // todo: write an SQL query that selects all columns from the artists table,
         //  but only for rows where name equals the method parameter 'name'
-        String sql = "";// <<< todo: SQL query here
+        String sql = "SELECT* FROM artists WHERE name=?";// <<< todo: SQL query here
         
         // todo: create a RowMapper that uses the constructor Artist(int id, String name)
 //        RowMapper<Artist> rm = (rs, rowNum) -> ..... <<< todo: CONTINUE HERE
+        RowMapper<Artist>rm =(rs, rowNum) -> new Artist(
+                rs.getInt("id"),
+                rs.getString("name")
+        );
         try
         {
             // leave this as it is
@@ -102,11 +116,15 @@ public class LibraryRepository
     {
         // todo: write an SQL query that inserts a new row into
         //  the artists table, specifying the artist's name
-        String sql = "";// <<< todo: SQL query here
+        String sql = """
+                INSERT INTO artists
+                (name)
+                VALUES(?)
+                """;// <<< todo: SQL query here
         try
         {
             // todo: execute the query and return whatever it returns
-            return 0;// <<< todo: execute the query here and return the result
+            return jdbcTemplate.update(sql,name);// <<< todo: execute the query here and return the result
         }
         catch (DataIntegrityViolationException e)
         {
@@ -123,13 +141,14 @@ public class LibraryRepository
         // todo: write an SQL query that updates rows in the artists table
         //  where the 'id' column equals the method parameter 'id'
         //  and set the 'name' column to the method parameter 'name'
-        String sql = "";// <<< todo: SQL query here
+        String sql = "UPDATE artists SET name = ? WHERE id = ?";// <<< todo: SQL query here
         try
         {
             // todo: execute the query and return its return value
             // hint: the new 'name' value is inside the 'artist' object,
             //  so get it from there
-            return 0;// <<< todo: execute the query here and return the result
+
+            return jdbcTemplate.update(sql,artist.getName(),id);// <<< todo: execute the query here and return the result
         }
         catch (DataIntegrityViolationException e)
         {
@@ -145,7 +164,11 @@ public class LibraryRepository
     {
         // todo: write an SQL query that inserts a new row into the tracks table,
         //  specifying values for the following three columns: name, year, and artist_id
-        String sql = "";// <<< todo: SQL query here
+        String sql = """
+                INSERT INTO tracks
+                (name ,year ,artist_id)
+                VALUES(?,?,?)
+                """;// <<< todo: SQL query here
         try
         {
             // leave this as it is
@@ -163,8 +186,9 @@ public class LibraryRepository
     
     public int deleteArtist(int id)
     {
+        String sql="DELETE FROM artist WHERE id=?";
         // todo: write an SQL query that deletes a row from artists that has the passed id
-        return jdbcTemplate.update(" >>> SQL QUERY HERE <<< ", id);
+        return jdbcTemplate.update(sql, id);
     }
     
     public int updateTrack(int artistId, int trackId, Track track)
@@ -173,7 +197,7 @@ public class LibraryRepository
         try
         {
             // todo: execute the query and pass the appropriate variables for the question marks in the SQL
-            return 0;// <<< todo: execute the query here and return the result
+            return jdbcTemplate.update(sql,track.getName(),track.getYear(),trackId,artistId);// <<< todo: execute the query here and return the result
         }
         catch (DataIntegrityViolationException e)
         {
@@ -195,13 +219,13 @@ public class LibraryRepository
         
         // todo: execute the query and pass the appropriate variables
         // note: the order of the variables is very important
-        return 0;// <<< todo: execute the query here and return the result
+        return jdbcTemplate.update(sql,trackId,artistId);// <<< todo: execute the query here and return the result
     }
     
     public List<Track> readTracks()
     {
         // todo: write an SQL query that gets everything from the tracks table
-        String sql = "";// <<< todo: SQL query here
+        String sql = "SELECT * FROM tracks";// <<< todo: SQL query here
     
         
         // todo: create a RowMapper that uses the constructor
@@ -209,6 +233,12 @@ public class LibraryRepository
         // note: IMPORTANT: the column names are: id, name, year, artist_id
         //  when you use rs to get the values, you need to pass the column name as the method parameter
 //        RowMapper<Track> rm = (rs, rowNum) -> ..... <<< todo: CONTINUE HERE
+        RowMapper<Track> rm=(rs, rowNum) -> new Track(
+                rs.getInt("id"),
+                rs.getString("name"),
+                rs.getInt("year"),
+                rs.getInt("artist_id")
+        );
         
         
         // leave this as it is
@@ -218,7 +248,7 @@ public class LibraryRepository
     public Track readTrack(int trackId, int artistId)
     {
         // todo: write an SQL query that gets a track with a specific id and a specific artist_id
-        String sql = "";// <<< todo: SQL query here
+        String sql = "SELECT * FROM track WHERE id=?,WHERE artistid=?";// <<< todo: SQL query here
         
         
         // todo: create a RowMapper that uses the constructor
@@ -226,8 +256,13 @@ public class LibraryRepository
         // note: IMPORTANT: the column names are: id, name, year, artist_id
         //  when you use rs to get the values, you need to pass the column name as the method parameter
 //        RowMapper<Track> rm = (rs, rowNum) -> ..... <<< todo: CONTINUE HERE
-        
-        
+        RowMapper<Track> rm=(rs, rowNum) -> new Track(
+                rs.getInt("id"),
+                rs.getString("name"),
+                rs.getInt("year"),
+                rs.getInt("artistid")
+                );
+
         // leave everything else as it is
         try
         {
